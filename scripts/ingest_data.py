@@ -33,12 +33,17 @@ def node_ingestion(root: Path, skip: bool) -> int:
         )
         return 0
     node_dir = root / "scripts" / "nodejs"
-    if not node_dir.is_dir():
-        print(f"[ingest] Missing {node_dir}", file=sys.stderr, flush=True)
-        return 1
     node_dir.mkdir(parents=True, exist_ok=True)
     (node_dir / "graphQlData").mkdir(exist_ok=True)
     (node_dir / "repos").mkdir(exist_ok=True)
+    if not (node_dir / "package.json").is_file():
+        print(
+            "[ingest] scripts/nodejs/ has no package.json — skipping npm install. "
+            "Restore scripts/nodejs from the repository (see README Node section).",
+            file=sys.stderr,
+            flush=True,
+        )
+        return 0
     env_file = node_dir / ".env"
     example = node_dir / ".env.example"
     if not env_file.exists() and example.exists():

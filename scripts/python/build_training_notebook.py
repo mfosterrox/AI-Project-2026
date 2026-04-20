@@ -34,8 +34,17 @@ code("""
 
 code("""
 import os
+import sys
 import warnings
 from pathlib import Path
+
+if sys.version_info >= (3, 14):
+    raise RuntimeError(
+        "TensorFlow is not published for Python 3.14+ on PyPI. Recreate this environment with Python 3.12 or 3.13, "
+        "then pip install -r requirements-local.txt. Example (macOS/Homebrew):\n"
+        "  /opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv && source .venv/bin/activate\n"
+        "  pip install -r requirements-local.txt"
+    )
 
 import numpy as np
 import pandas as pd

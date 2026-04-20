@@ -27,11 +27,13 @@ pip install -r requirements-local.txt
 
 ### 1. Data ingestion — `scripts/ingest_data.py`
 
+Run with **`python3 scripts/ingest_data.py`** (not only `./scripts/ingest_data.py`, unless the file is executable and your shell resolves the shebang).
+
 Runs **`npm install`** under `scripts/nodejs/` (creates `graphQlData/`, `repos/`, seeds `.env` from `.env.example` when missing), then runs **`scripts/python/fetch_datasets.py`** using **`datasets/manifest.json`**: HTTP bootstrap CSVs, optional Kaggle / advisory clone / Hugging Face sources (see **`datasets/README.md`**). Flags: `--no-node`, `--no-fetch`, `--node-only`, `--fetch-only`. Environment: `SKIP_DATASET_FETCH`, `FETCH_ENABLE_*`, `DATA_GITHUB_*`, etc. Optional pip: **`requirements-datasets.txt`**.
 
 ### 2. Model training — `scripts/train_models.py`
 
-Headlessly executes **`notebooks/training_models.ipynb`** with Jupyter (`nbconvert`) and writes **`notebooks/_executed/training_models.executed.ipynb`**. Use **`--interactive`** to print the `jupyter notebook …` command instead. For feature engineering only, still open **`notebooks/VisualizePreprocess.ipynb`** in Jupyter.
+Headlessly executes **`notebooks/training_models.ipynb`** with Jupyter (`nbconvert`) and writes **`notebooks/_executed/training_models.executed.ipynb`**. The script **refuses to run on Python 3.14+** (no TensorFlow wheels) and checks that `tensorflow` is importable; use **`--skip-preflight`** only if you know what you are doing. Use **`--interactive`** to print the `jupyter notebook …` command instead. For feature engineering only, still open **`notebooks/VisualizePreprocess.ipynb`** in Jupyter.
 
 ### Optional: live GitHub API collection
 

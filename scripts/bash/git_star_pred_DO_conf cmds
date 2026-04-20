@@ -1,11 +1,14 @@
 # Replace YOUR_GITHUB_USERNAME and YOUR_REPO_NAME after creating the GitHub repository.
 git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git
-cd YOUR_REPO_NAME/scripts/bash
-vim settingUpDOServer.sh
+cd YOUR_REPO_NAME
 
-chmod +x settingUpDOServer.sh
-./settingUpDOServer.sh
+chmod +x scripts/bash/setup_local.sh
+./scripts/bash/setup_local.sh
 
-cd ./../nodejs/
-tmux new -s dataset
-node githubGraphQLApiCallsDO_V3.js
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-local.txt
+jupyter notebook
+
+# Optional data collection (tmux not required on a laptop)
+# cd scripts/nodejs && node githubGraphQLApiCallsDO_V3.js

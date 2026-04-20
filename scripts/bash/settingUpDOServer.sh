@@ -1,10 +1,3 @@
-cd ./../nodejs
-curl -sL https://deb.nodesource.com/setup_8.x | sudo -E bash -
-sudo apt-get install -y nodejs
-npm install
-echo "TOKEN =
-START = 0
-END = 10000" > .env
-mkdir graphQlData
-cd ./../../
-cp .tmux.conf ~/.tmux.conf
+#!/usr/bin/env bash
+# Historical name kept for old links. Local development uses setup_local.sh.
+exec "$(dirname "$0")/setup_local.sh"

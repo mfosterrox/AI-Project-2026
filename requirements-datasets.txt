@@ -1,0 +1,5 @@
+# Optional dependencies for extended dataset fetchers (see datasets/manifest.json).
+# Install: pip install -r requirements-datasets.txt
+kaggle>=1.6.0
+huggingface_hub>=0.20.0
+# google-cloud-bigquery>=3.0.0   # uncomment if you script BigQuery exports in Python

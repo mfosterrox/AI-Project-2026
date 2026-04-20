@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "description": "Data sources for training merges. Bulk output lives under datasets/downloads/ (gitignored). Each source_key has a README under datasets/sources/<source_key>/README.md.",
+  "github_coordinates": {
+    "owner_env": "DATA_GITHUB_OWNER",
+    "repo_env": "DATA_GITHUB_REPO",
+    "ref_env": "DATA_GITHUB_REF",
+    "default_owner": "",
+    "default_repo": "",
+    "default_ref": "main"
+  },
+  "sources": [
+    {
+      "type": "http_github_raw",
+      "id": "raw_github_features",
+      "source_key": "github_raw",
+      "description": "Wide table of repo features before notebook preprocessing (legacy / course bootstrap).",
+      "primary_path_on_repo": "dataset/data.csv",
+      "fallback_url": "https://raw.githubusercontent.com/Doodies/Github-Stars-Predictor/master/dataset/data.csv",
+      "download_filename": "data.csv",
+      "notebook_copies": ["notebooks/data.csv"]
+    },
+    {
+      "type": "http_github_raw",
+      "id": "preprocessed_training",
+      "source_key": "github_raw",
+      "description": "Feature-engineered CSV used by training_models.ipynb.",
+      "primary_path_on_repo": "dataset/PreprocessData.csv",
+      "fallback_url": "https://raw.githubusercontent.com/Doodies/Github-Stars-Predictor/master/dataset/PreprocessData.csv",
+      "download_filename": "PreprocessData.csv",
+      "notebook_copies": ["dataset/PreprocessData.csv"]
+    },
+    {
+      "type": "kaggle_dataset",
+      "id": "kaggle_most_popular_github_repos",
+      "source_key": "kaggle_github_repos",
+      "description": "Primary static base: 215k+ repos, popularity and language fields.",
+      "kaggle_slug": "donbarbos/github-repos",
+      "env_enable": "FETCH_ENABLE_KAGGLE"
+    },
+    {
+      "type": "git_shallow_clone",
+      "id": "github_advisory_database_clone",
+      "source_key": "github_advisory_database",
+      "description": "GitHub Advisory Database JSON for security / trust signals.",
+      "git_url": "https://github.com/github/advisory-database.git",
+      "target_dir": "advisory-database",
+      "env_enable": "FETCH_ENABLE_ADVISORY_DB"
+    },
+    {
+      "type": "huggingface_snapshot",
+      "id": "huggingface_commitpackft",
+      "source_key": "huggingface_commitpackft",
+      "description": "Filtered commit-level activity (~2GB); aggregate per repo offline.",
+      "repo_id": "bigcode/commitpackft",
+      "env_enable": "FETCH_ENABLE_HF_COMMITPACKFT"
+    },
+    {
+      "type": "manual",
+      "id": "gharchive_bigquery_extract",
+      "source_key": "gharchive_bigquery",
+      "description": "Temporal activity from GH Archive via BigQuery — run SQL and export to datasets/downloads/.",
+      "readme_relative": "datasets/sources/gharchive_bigquery/README.md",
+      "sql_template_relative": "scripts/sql/gharchive_example.sql"
+    },
+    {
+      "type": "manual",
+      "id": "github_api_live_enrichment",
+      "source_key": "github_api_live",
+      "description": "REST/GraphQL + community profile — use existing Node collectors or batch clients with a PAT.",
+      "readme_relative": "datasets/sources/github_api_live/README.md"
+    }
+  ]
+}

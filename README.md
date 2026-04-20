@@ -13,13 +13,55 @@ After you create the GitHub repository with the title above, clone it locally an
 - `YOUR_GITHUB_USERNAME` — your GitHub user or organization
 - `YOUR_REPO_NAME` — the repository name you chose on GitHub (for example `mapping-programming-languages-effectiveness`)
 
+## Local development (run and test models)
+
+Everything can run on your laptop: notebooks for training/evaluation, and optional Node.js scripts if you want to refresh GitHub data.
+
+1. **One-time environment**
+   - Install [Node.js](https://nodejs.org/) (LTS v18+ recommended) for the data pipeline scripts.
+   - Install [Python 3.10+](https://www.python.org/) for Jupyter and the models.
+
+2. **Bootstrap scripts and secrets**
+
+   ```bash
+   chmod +x scripts/bash/setup_local.sh
+   ./scripts/bash/setup_local.sh
+   ```
+
+   This installs npm dependencies under `scripts/nodejs/`, creates `graphQlData/` and `repos/`, and copies `scripts/nodejs/.env.example` to `scripts/nodejs/.env` if `.env` is missing. Edit `.env` and set at least `TOKEN` (GitHub personal access token with appropriate repo/API scopes) before running the GraphQL collectors.
+
+   It also runs **`scripts/python/fetch_datasets.py`**, which reads **`datasets/manifest.json`** (version 2 `sources`): default **HTTP** pulls for legacy notebook CSVs, **manual** entries for BigQuery GH Archive and live GitHub API (documented only), and **optional** pulls for **Kaggle** (`FETCH_ENABLE_KAGGLE=1`), **Advisory DB** shallow clone (`FETCH_ENABLE_ADVISORY_DB=1`), and **Hugging Face CommitPackFT** (`FETCH_ENABLE_HF_COMMITPACKFT=1`), or set **`FETCH_ENABLE_ALL_OPTIONAL=1`**. Install **`pip install -r requirements-datasets.txt`** before optional sources. Set `SKIP_DATASET_FETCH=1` to skip everything, or configure `DATA_GITHUB_OWNER` / `DATA_GITHUB_REPO` / `DATA_GITHUB_REF` for your own raw CSVs. See **`datasets/README.md`**.
+
+3. **Python venv and Jupyter**
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate   # Windows: .venv\Scripts\activate
+   pip install -r requirements-local.txt
+   jupyter notebook
+   ```
+
+   Open `notebooks/VisualizePreprocess.ipynb` then `notebooks/training_models.ipynb` (or use JupyterLab). Place or download your CSV inputs as each notebook expects; if cells still use `from keras...` on Python 3, switch imports to `from tensorflow.keras...` to match the TensorFlow stack in `requirements-local.txt`.
+
+4. **Optional: collect data from GitHub** (same machine; respect [rate limits](https://docs.github.com/en/graphql/overview/resource-limitations))
+
+   ```bash
+   cd scripts/nodejs
+   # node getting_repos_v2.js      # REST search; needs CLIENT_ID / CLIENT_SECRET in .env
+   # node githubGraphQLApiCallsDO_V3.js
+   ```
+
+   Put the repo list CSV under `scripts/nodejs/repos/` as referenced in the script. Use conservative `START` / `END` in `.env` while testing.
+
+The file `scripts/bash/local_dev_cmds` mirrors these steps. `settingUpDOServer.sh` is kept as a thin wrapper that runs `setup_local.sh` for any old instructions that still mention it.
+
 ## Dataset
 
-We used the GitHub REST API and GraphQL API to collect data for repositories having more than 100 stars. The data is available in the dataset directory. We were able to collect the data faster using DigitalOcean's multiple servers, so we thank [DigitalOcean](http://digitalocean.com) for providing free credits to students to use servers. For details on dataset features, refer to the summary section below.
+We combine a **Kaggle** base ([donbarbos/github-repos](https://www.kaggle.com/datasets/donbarbos/github-repos)), optional **GH Archive** aggregates (BigQuery), the **GitHub Advisory Database**, **CommitPackFT** (Hugging Face), and **GitHub REST/GraphQL** enrichment—see **`datasets/README.md`**. **Bulk files are not committed:** `setup_local.sh` (or `./scripts/bash/fetch_datasets.sh`) fills **`datasets/downloads/`** per `datasets/manifest.json`. Each source has **`datasets/sources/<name>/README.md`**. Legacy notebook CSVs still come from the `github_raw` HTTP entries. For feature lists, see the summary section below.
 
 ## Tools used
 
-- Python 2.7
+- Python 3.10+ (recommended for local notebooks; original work also used Python 2.7)
 - Jupyter Notebook
 - NumPy
 - Sklearn
@@ -35,11 +77,19 @@ We also used [Google Colab's](http://colab.research.google.com/) GPU notebooks, 
 
 Below is a brief description of the code files and folders in the repo.
 
-### Bash Script
+### Bash scripts
+
+- **setup_local.sh** <br>
+  filepath: scripts/bash/setup_local.sh<br>
+  Prepares your machine for local work: checks for Node.js, runs `npm install` in `scripts/nodejs/`, creates `graphQlData/` and `repos/`, and seeds `scripts/nodejs/.env` from `.env.example` when needed.
 
 - **settingUpDOServer.sh** <br>
   filepath: scripts/bash/settingUpDOServer.sh<br>
-  This is used for configuring the DigitalOcean server.
+  Legacy filename; it now delegates to `setup_local.sh` so older docs still work.
+
+- **fetch_datasets.sh** <br>
+  filepath: scripts/bash/fetch_datasets.sh<br>
+  Runs `scripts/python/fetch_datasets.py` to download manifest-listed files into `datasets/downloads/` and refresh notebook copies.
 
 ### NodeJs scripts
 
@@ -56,6 +106,10 @@ Below is a brief description of the code files and folders in the repo.
   This script fetches the complete info of the repositories that were fetched by the above script and uses the GitHub GraphQL API. It follows the approach of requesting data for the next repo after receiving the response of the already sent request.
 
 ### Python scripts
+
+- **fetch_datasets.py** <br>
+  filepath: scripts/python/fetch_datasets.py<br>
+  Reads `datasets/manifest.json` (`sources[]` with `type`: HTTP GitHub raw, Kaggle CLI, shallow `git clone`, Hugging Face `snapshot_download`, or `manual`). Writes under `datasets/downloads/<source_key>/` and `fetch_log.json`; each source is documented in `datasets/sources/<source_key>/README.md`.
 
 - **json_to_csv.py**<br>
   filepath: scripts/python/json_to_csv.py<br>

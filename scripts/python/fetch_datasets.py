@@ -2,6 +2,8 @@
 """
 Download / clone / snapshot datasets listed in datasets/manifest.json (version 2).
 
+Invoked by ``scripts/ingest_data.py`` (do not need to run this file directly unless debugging).
+
 Each source uses ``source_key`` (folder under datasets/downloads/) and is documented in
 ``datasets/sources/<source_key>/README.md``.
 """

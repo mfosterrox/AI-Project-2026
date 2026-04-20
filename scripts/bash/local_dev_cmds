@@ -1,19 +1,13 @@
-# Local workflow (from repository root after clone)
+# Local workflow (from repository root)
 
-chmod +x scripts/bash/setup_local.sh
-./scripts/bash/setup_local.sh
-# (downloads training CSVs into datasets/downloads/ — see datasets/README.md)
-
-# Re-fetch only:
-# ./scripts/bash/fetch_datasets.sh
-
-# Python environment for notebooks (train / test models)
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-local.txt
-jupyter notebook
 
-# Optional: fetch or extend GitHub data (requires scripts/nodejs/.env and CSV inputs under scripts/nodejs/repos/)
-cd scripts/nodejs
-# node getting_repos_v2.js
-# node githubGraphQLApiCallsDO_V3.js
+# 1) Data ingestion (Node/npm + datasets/manifest.json → datasets/downloads/)
+python3 scripts/ingest_data.py
+
+# 2) Model training (headless notebook execute → notebooks/_executed/)
+python3 scripts/train_models.py
+# or interactive:
+# python3 scripts/train_models.py --interactive

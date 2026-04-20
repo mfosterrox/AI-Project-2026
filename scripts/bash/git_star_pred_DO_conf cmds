@@ -1,14 +1,8 @@
-# Replace YOUR_GITHUB_USERNAME and YOUR_REPO_NAME after creating the GitHub repository.
-git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git
-cd YOUR_REPO_NAME
-
-chmod +x scripts/bash/setup_local.sh
-./scripts/bash/setup_local.sh
+# After clone (replace YOUR_* placeholders if needed)
 
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-local.txt
-jupyter notebook
 
-# Optional data collection (tmux not required on a laptop)
-# cd scripts/nodejs && node githubGraphQLApiCallsDO_V3.js
+python3 scripts/ingest_data.py
+python3 scripts/train_models.py

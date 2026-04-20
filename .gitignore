@@ -44,11 +44,13 @@ data/
 # Downloaded / generated datasets (tracked docs live under datasets/ and datasets/sources/)
 datasets/downloads/
 
-# Working copies produced for notebooks by scripts/python/fetch_datasets.py
+# Working copies produced for notebooks by data ingestion (fetch_datasets.py)
 notebooks/data.csv
 notebooks/PreprocessData.csv
 dataset/*.csv
 dataset/*.json
 scripts/nodejs/node_modules
 notebooks/.ipynb_checkpoints/
+notebooks/keras_tuner_scratch/
+notebooks/_executed/
 notebooks/tpot.ipynb

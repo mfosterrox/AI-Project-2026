@@ -13,51 +13,35 @@ After you create the GitHub repository with the title above, clone it locally an
 - `YOUR_GITHUB_USERNAME` — your GitHub user or organization
 - `YOUR_REPO_NAME` — the repository name you chose on GitHub (for example `mapping-programming-languages-effectiveness`)
 
-## Local development (run and test models)
+## Local development (two pipeline scripts)
 
-Everything can run on your laptop: notebooks for training/evaluation, and optional Node.js scripts if you want to refresh GitHub data.
+Install [Python](https://www.python.org/) and (if you use the GitHub collectors) [Node.js](https://nodejs.org/) LTS.
 
-1. **One-time environment**
-   - Install [Node.js](https://nodejs.org/) (LTS v18+ recommended) for the data pipeline scripts.
-   - Install [Python 3.10+](https://www.python.org/) for Jupyter and the models.
+**TensorFlow / Keras Tuner:** there are **no official TensorFlow wheels for Python 3.14+** yet, so `pip install` would report `No matching distribution found for tensorflow`. Use **Python 3.12 or 3.13** for the training notebook (for example `brew install python@3.12` on macOS, then `/opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv`). `requirements-local.txt` uses environment markers so installs still succeed on 3.14 for the non-TF packages.
 
-2. **Bootstrap scripts and secrets**
+```bash
+python3 -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements-local.txt
+```
 
-   ```bash
-   chmod +x scripts/bash/setup_local.sh
-   ./scripts/bash/setup_local.sh
-   ```
+### 1. Data ingestion — `scripts/ingest_data.py`
 
-   This installs npm dependencies under `scripts/nodejs/`, creates `graphQlData/` and `repos/`, and copies `scripts/nodejs/.env.example` to `scripts/nodejs/.env` if `.env` is missing. Edit `.env` and set at least `TOKEN` (GitHub personal access token with appropriate repo/API scopes) before running the GraphQL collectors.
+Runs **`npm install`** under `scripts/nodejs/` (creates `graphQlData/`, `repos/`, seeds `.env` from `.env.example` when missing), then runs **`scripts/python/fetch_datasets.py`** using **`datasets/manifest.json`**: HTTP bootstrap CSVs, optional Kaggle / advisory clone / Hugging Face sources (see **`datasets/README.md`**). Flags: `--no-node`, `--no-fetch`, `--node-only`, `--fetch-only`. Environment: `SKIP_DATASET_FETCH`, `FETCH_ENABLE_*`, `DATA_GITHUB_*`, etc. Optional pip: **`requirements-datasets.txt`**.
 
-   It also runs **`scripts/python/fetch_datasets.py`**, which reads **`datasets/manifest.json`** (version 2 `sources`): default **HTTP** pulls for legacy notebook CSVs, **manual** entries for BigQuery GH Archive and live GitHub API (documented only), and **optional** pulls for **Kaggle** (`FETCH_ENABLE_KAGGLE=1`), **Advisory DB** shallow clone (`FETCH_ENABLE_ADVISORY_DB=1`), and **Hugging Face CommitPackFT** (`FETCH_ENABLE_HF_COMMITPACKFT=1`), or set **`FETCH_ENABLE_ALL_OPTIONAL=1`**. Install **`pip install -r requirements-datasets.txt`** before optional sources. Set `SKIP_DATASET_FETCH=1` to skip everything, or configure `DATA_GITHUB_OWNER` / `DATA_GITHUB_REPO` / `DATA_GITHUB_REF` for your own raw CSVs. See **`datasets/README.md`**.
+### 2. Model training — `scripts/train_models.py`
 
-3. **Python venv and Jupyter**
+Headlessly executes **`notebooks/training_models.ipynb`** with Jupyter (`nbconvert`) and writes **`notebooks/_executed/training_models.executed.ipynb`**. Use **`--interactive`** to print the `jupyter notebook …` command instead. For feature engineering only, still open **`notebooks/VisualizePreprocess.ipynb`** in Jupyter.
 
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate   # Windows: .venv\Scripts\activate
-   pip install -r requirements-local.txt
-   jupyter notebook
-   ```
+### Optional: live GitHub API collection
 
-   Open `notebooks/VisualizePreprocess.ipynb` then `notebooks/training_models.ipynb` (or use JupyterLab). Place or download your CSV inputs as each notebook expects; if cells still use `from keras...` on Python 3, switch imports to `from tensorflow.keras...` to match the TensorFlow stack in `requirements-local.txt`.
+After step 1, from `scripts/nodejs/` with `.env` configured: `node getting_repos_v2.js` and/or `node githubGraphQLApiCallsDO_V3.js` (respect [rate limits](https://docs.github.com/en/graphql/overview/resource-limitations)).
 
-4. **Optional: collect data from GitHub** (same machine; respect [rate limits](https://docs.github.com/en/graphql/overview/resource-limitations))
-
-   ```bash
-   cd scripts/nodejs
-   # node getting_repos_v2.js      # REST search; needs CLIENT_ID / CLIENT_SECRET in .env
-   # node githubGraphQLApiCallsDO_V3.js
-   ```
-
-   Put the repo list CSV under `scripts/nodejs/repos/` as referenced in the script. Use conservative `START` / `END` in `.env` while testing.
-
-The file `scripts/bash/local_dev_cmds` mirrors these steps. `settingUpDOServer.sh` is kept as a thin wrapper that runs `setup_local.sh` for any old instructions that still mention it.
+**Legacy:** `scripts/bash/setup_local.sh` and `fetch_datasets.sh` forward to `ingest_data.py`. See `scripts/bash/local_dev_cmds` for a minimal copy-paste list.
 
 ## Dataset
 
-We combine a **Kaggle** base ([donbarbos/github-repos](https://www.kaggle.com/datasets/donbarbos/github-repos)), optional **GH Archive** aggregates (BigQuery), the **GitHub Advisory Database**, **CommitPackFT** (Hugging Face), and **GitHub REST/GraphQL** enrichment—see **`datasets/README.md`**. **Bulk files are not committed:** `setup_local.sh` (or `./scripts/bash/fetch_datasets.sh`) fills **`datasets/downloads/`** per `datasets/manifest.json`. Each source has **`datasets/sources/<name>/README.md`**. Legacy notebook CSVs still come from the `github_raw` HTTP entries. For feature lists, see the summary section below.
+We combine a **Kaggle** base ([donbarbos/github-repos](https://www.kaggle.com/datasets/donbarbos/github-repos)), optional **GH Archive** aggregates (BigQuery), the **GitHub Advisory Database**, **CommitPackFT** (Hugging Face), and **GitHub REST/GraphQL** enrichment—see **`datasets/README.md`**. **Bulk files are not committed:** `python3 scripts/ingest_data.py` fills **`datasets/downloads/`** per `datasets/manifest.json`. Each source has **`datasets/sources/<name>/README.md`**. Legacy notebook CSVs still come from the `github_raw` HTTP entries. For feature lists, see the summary section below.
 
 ## Tools used
 
@@ -77,19 +61,17 @@ We also used [Google Colab's](http://colab.research.google.com/) GPU notebooks, 
 
 Below is a brief description of the code files and folders in the repo.
 
-### Bash scripts
+### Pipeline scripts (primary)
 
-- **setup_local.sh** <br>
-  filepath: scripts/bash/setup_local.sh<br>
-  Prepares your machine for local work: checks for Node.js, runs `npm install` in `scripts/nodejs/`, creates `graphQlData/` and `repos/`, and seeds `scripts/nodejs/.env` from `.env.example` when needed.
+- **`scripts/ingest_data.py`** — Data ingestion: Node/npm bootstrap + manifest downloads (`datasets/manifest.json` → `datasets/downloads/`, notebook copies). Implementation: `scripts/python/fetch_datasets.py`.
 
-- **settingUpDOServer.sh** <br>
-  filepath: scripts/bash/settingUpDOServer.sh<br>
-  Legacy filename; it now delegates to `setup_local.sh` so older docs still work.
+- **`scripts/train_models.py`** — Model training: executes `notebooks/training_models.ipynb` via `jupyter nbconvert` into `notebooks/_executed/` (or `--interactive` for manual Jupyter).
 
-- **fetch_datasets.sh** <br>
-  filepath: scripts/bash/fetch_datasets.sh<br>
-  Runs `scripts/python/fetch_datasets.py` to download manifest-listed files into `datasets/downloads/` and refresh notebook copies.
+### Bash (legacy wrappers)
+
+- **`scripts/bash/setup_local.sh`** → forwards to `python3 scripts/ingest_data.py`.
+- **`scripts/bash/fetch_datasets.sh`** → `ingest_data.py --fetch-only`.
+- **`scripts/bash/settingUpDOServer.sh`** → same as `setup_local.sh`.
 
 ### NodeJs scripts
 
@@ -109,7 +91,7 @@ Below is a brief description of the code files and folders in the repo.
 
 - **fetch_datasets.py** <br>
   filepath: scripts/python/fetch_datasets.py<br>
-  Reads `datasets/manifest.json` (`sources[]` with `type`: HTTP GitHub raw, Kaggle CLI, shallow `git clone`, Hugging Face `snapshot_download`, or `manual`). Writes under `datasets/downloads/<source_key>/` and `fetch_log.json`; each source is documented in `datasets/sources/<source_key>/README.md`.
+  Called by **`scripts/ingest_data.py`**. Reads `datasets/manifest.json` (`sources[]` …) and writes under `datasets/downloads/<source_key>/` plus `fetch_log.json`; each source is documented in `datasets/sources/<source_key>/README.md`.
 
 - **json_to_csv.py**<br>
   filepath: scripts/python/json_to_csv.py<br>
@@ -127,7 +109,7 @@ Below is a brief description of the code files and folders in the repo.
 
 - **training_models.ipynb**<br>
   filepath: notebooks/training_models.ipynb<br>
-  In this notebook, we train different models with hyperparameter tuning on our dataset and compare their results at the end. For details on models trained, their prediction scores, and so on, check the summary below.
+  Trains **baselines** (Random Forest, sklearn Gradient Boosting, XGBoost, CatBoost) and a **main tuned feed-forward Keras model** (BatchNorm, Dropout, L2, EarlyStopping, ReduceLROnPlateau, **Keras Tuner**). Includes an **optional LSTM** demo on a synthetic weekly proxy (replace with GH Archive sequences when available). Metrics: \\(R^2\\), MAE, MSE. Optional env: `KT_MAX_TRIALS`, `KT_EPOCHS`, `KT_BATCH`, `KERAS_TUNER_DIR`. Regenerate from `scripts/python/build_training_notebook.py` if needed.
 
 ## Summary
 
@@ -184,10 +166,9 @@ There are 49 features before pre-processing. After pre-processing (adding new fe
 
 ### Models Trained
 
-- **Gradient Boost Regressor**
-- **Cat Boost Regressor**
-- **Random Forest Regressor**
-- **Deep Neural Network**
+- **Baselines:** Gradient Boosting (sklearn), CatBoost, Random Forest, XGBoost
+- **Main model:** tuned feed-forward **deep neural network** (TensorFlow/Keras: BatchNorm, Dropout, L2, callbacks, Keras Tuner)
+- **Optional demo:** small **LSTM** on synthetic weekly-style sequences (illustrative until GH Archive features are merged)
 
 ### Evaluation Metrics
 

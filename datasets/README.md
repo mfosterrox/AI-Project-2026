@@ -34,7 +34,7 @@ export FETCH_ENABLE_ADVISORY_DB=1
 export FETCH_ENABLE_HF_COMMITPACKFT=1
 # or: export FETCH_ENABLE_ALL_OPTIONAL=1  # enables all three flags above
 
-./scripts/bash/fetch_datasets.sh
+python3 scripts/ingest_data.py --fetch-only
 ```
 
 HTTP bootstrap + manual sources always run (manual entries only append to `fetch_log.json`). Heavy sources are **skipped** unless their env flag is set (or `FETCH_ENABLE_ALL_OPTIONAL=1`).

@@ -18,7 +18,7 @@ Requires **`git`** on your PATH.
 
 ```bash
 export FETCH_ENABLE_ADVISORY_DB=1
-./scripts/bash/fetch_datasets.sh
+python3 scripts/ingest_data.py --fetch-only
 ```
 
 This performs a **shallow clone** (`--depth 1`) of the advisory database into `datasets/downloads/github_advisory_database/advisory-database/`. If the directory already exists, the clone is skipped unless you set **`FETCH_REFRESH_GIT_CLONES=1`** (the script removes the target directory first when that is set).

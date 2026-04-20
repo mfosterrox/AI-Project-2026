@@ -14,7 +14,7 @@ as defined in `datasets/manifest.json` (`download_filename`).
 
 ## Configuration
 
-Set these **before** running `scripts/python/fetch_datasets.py` (or `setup_local.sh`) if your CSVs are published on **your** repository:
+Set these **before** running `python3 scripts/ingest_data.py --fetch-only` (or the full `ingest_data.py` without `--fetch-only`) if your CSVs are published on **your** repository:
 
 | Variable | Meaning |
 |----------|---------|

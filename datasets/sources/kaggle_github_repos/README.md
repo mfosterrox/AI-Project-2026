@@ -19,7 +19,7 @@ Aligns with the original star-prediction framing and the legacy Doodies feature 
 
    ```bash
    export FETCH_ENABLE_KAGGLE=1
-   ./scripts/bash/fetch_datasets.sh
+   python3 scripts/ingest_data.py --fetch-only
    ```
 
 The orchestrator runs `kaggle datasets download -d donbarbos/github-repos` into `datasets/downloads/kaggle_github_repos/` and `--unzip` when supported.

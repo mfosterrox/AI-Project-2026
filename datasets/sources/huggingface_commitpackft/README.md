@@ -19,7 +19,7 @@ Requires Python package **`huggingface_hub`** (`pip install -r requirements-data
 
 ```bash
 export FETCH_ENABLE_HF_COMMITPACKFT=1
-./scripts/bash/fetch_datasets.sh
+python3 scripts/ingest_data.py --fetch-only
 ```
 
 This calls `snapshot_download` for `bigcode/commitpackft` into `datasets/downloads/huggingface_commitpackft/`. The first run can take significant time and disk space.

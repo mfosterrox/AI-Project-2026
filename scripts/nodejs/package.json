@@ -1,7 +1,7 @@
 {
-  "name": "git-star-predictor",
+  "name": "mapping-languages-open-source-effectiveness-nn",
   "version": "1.0.0",
-  "description": "",
+  "description": "Mapping programming languages to open-source project effectiveness using neural networks (GitHub stars and repository features).",
   "main": "Get-Contributors.js",
   "dependencies": {
     "csvtojson": "^1.1.9",

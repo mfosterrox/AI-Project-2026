@@ -1,5 +1,6 @@
-git clone https://github.com/Doodies/Github-Stars-Predictor.git
-cd Github-Stars-Predictor/scripts/bash
+# Replace YOUR_GITHUB_USERNAME and YOUR_REPO_NAME after creating the GitHub repository.
+git clone https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git
+cd YOUR_REPO_NAME/scripts/bash
 vim settingUpDOServer.sh
 
 chmod +x settingUpDOServer.sh

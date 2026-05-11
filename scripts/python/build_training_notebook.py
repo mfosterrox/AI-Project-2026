@@ -1,4 +1,4 @@
-"""Regenerate notebooks/training_models.ipynb — run if you edit this script."""
+"""Writes notebooks/training_models.ipynb. Run after edits: python scripts/python/build_training_notebook.py"""
 import json
 from pathlib import Path
 
@@ -16,11 +16,9 @@ def code(s):
     cells.append({"cell_type": "code", "execution_count": None, "metadata": {}, "outputs": [], "source": src})
 
 md("""
-# Predicting repo stars (DNN vs baselines)
+# Training: baselines + Keras DNN + optional LSTM placeholder
 
-Part A fits RF / gradient boosting / XGBoost / CatBoost. Part B is a dense Keras net with Keras Tuner. Part C is a small LSTM on a made-up weekly sequence from `commits` — only there so the notebook can run an LSTM without GH Archive data yet.
-
-Holdout metrics: \\(R^2\\), MAE, MSE.
+Metrics: \\(R^2\\), MAE, MSE on holdout.
 """)
 
 code("""
@@ -28,8 +26,6 @@ import os
 import sys
 import warnings
 from pathlib import Path
-
-# Use Python 3.12 or 3.13 + requirements-local.txt so TensorFlow installs.
 
 if sys.version_info >= (3, 14):
     raise RuntimeError(
@@ -60,7 +56,7 @@ try:
 except Exception as _xgb_err:
     XGBRegressor = None  # type: ignore
     _HAS_XGB = False
-    print("XGBoost import skipped (macOS: often need `brew install libomp`):", _xgb_err)
+    print("XGBoost skipped:", _xgb_err)
 
 warnings.filterwarnings("ignore", category=UserWarning)
 tf.random.set_seed(42)
@@ -111,11 +107,7 @@ n_features = X_train.shape[1]
 print("Train:", X_train.shape, "Test:", X_test.shape, "Features:", n_features)
 """)
 
-md("""
-## Part A — Baselines
-
-Same train/test split and scaling as the neural net below.
-""")
+md("## Baselines")
 
 code("""
 baseline_rows = []
@@ -150,7 +142,7 @@ if _HAS_XGB and XGBRegressor is not None:
     pred_xgb = xgb.predict(X_test)
     baseline_rows.append(("XGBoost", metrics_dict(y_test, pred_xgb)))
 else:
-    print("Skipping XGBoost baseline (OpenMP / lib missing on some Macs; see README).")
+    print("Skipping XGBoost.")
 
 cat = CatBoostRegressor(
     iterations=600,
@@ -180,11 +172,7 @@ baseline_df = pd.DataFrame(
 print(baseline_df.sort_values("r2", ascending=False).to_string())
 """)
 
-md("""
-## Part B — Feed-forward net
-
-Dense layers + batch norm + dropout + L2; tuner searches depth/width/dropout/L2/lr. Env vars `KT_MAX_TRIALS`, `KT_EPOCHS`, `KT_BATCH` control runtime.
-""")
+md("## Keras FNN (tuner)")
 
 code("""
 input_dim = n_features
@@ -279,11 +267,7 @@ best_baseline_r2 = summary.drop(index=["Neural Net (FNN, tuned)"], errors="ignor
 print(f"\\nBest baseline R²: {best_baseline_r2:.4f} | FNN R²: {nn_metrics['r2']:.4f}")
 """)
 
-md("""
-## Part C — LSTM (placeholder)
-
-Fake 5-step sequences from `commits` so there is something temporal to feed the LSTM. Swap in real weekly features later if you add GH Archive.
-""")
+md("## LSTM demo (synthetic sequence from `commits`)")
 
 code("""
 if com_tr is None:

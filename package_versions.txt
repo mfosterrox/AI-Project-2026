@@ -1,0 +1,5 @@
+# Replace this file by running (with your project .venv activated, Python 3.12 or 3.13):
+#
+#   python versions.py
+#
+# That command overwrites this file with `pip freeze` plus Python version info.

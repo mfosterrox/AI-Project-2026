@@ -1,13 +1,5 @@
 #!/usr/bin/env bash
-# One-shot setup + data download + model training (macOS).
-# From repo root:  bash scripts/setup_and_train_mac.sh
-# Or:              chmod +x scripts/setup_and_train_mac.sh && ./scripts/setup_and_train_mac.sh
-#
-# Options:
-#   --skip-brew       Do not run `brew install` for libomp (XGBoost needs OpenMP on Apple Silicon Intel Homebrew).
-#   --skip-fetch      Skip data download (use existing PreprocessData.csv).
-#   --recreate-venv   Remove .venv and create a fresh one.
-
+# macOS: libomp + venv + pip + fetch + train. Options: --skip-brew --skip-fetch --recreate-venv
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -29,21 +21,17 @@ for arg in "$@"; do
   esac
 done
 
-die() { echo "[setup_and_train] ERROR: $*" >&2; exit 1; }
+die() { echo "$*" >&2; exit 1; }
 
-echo "[setup_and_train] Repository root: $ROOT"
 
 # --- OpenMP for XGBoost on macOS (Apple Silicon / Homebrew) ---
 if [[ "$(uname -s)" == "Darwin" ]] && [[ "$SKIP_BREW" -eq 0 ]]; then
   if command -v brew &>/dev/null; then
     if brew list libomp &>/dev/null 2>&1; then
-      echo "[setup_and_train] libomp already installed (Homebrew)."
+      :
     else
-      echo "[setup_and_train] Installing libomp (OpenMP) for XGBoost via Homebrew..."
       brew install libomp
     fi
-  else
-    echo "[setup_and_train] Homebrew not found. If XGBoost fails to load, install: brew install libomp" >&2
   fi
 fi
 
@@ -71,16 +59,16 @@ pick_python() {
 }
 
 PY="$(pick_python)" || die "Need Python 3.12 or 3.13 on PATH (TensorFlow). Example: brew install python@3.12"
-echo "[setup_and_train] Using Python: $PY ($("$PY" --version 2>&1))"
+echo "python: $PY"
 
 # --- Virtual environment ---
 if [[ "$RECREATE_VENV" -eq 1 ]] && [[ -d "$ROOT/.venv" ]]; then
-  echo "[setup_and_train] Removing existing .venv (--recreate-venv)"
+  echo "removing .venv"
   rm -rf "$ROOT/.venv"
 fi
 
 if [[ ! -d "$ROOT/.venv" ]]; then
-  echo "[setup_and_train] Creating .venv with $PY"
+  echo "creating .venv"
   "$PY" -m venv "$ROOT/.venv"
 fi
 
@@ -91,16 +79,15 @@ if python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 14) else 1)'; th
   die "Active Python is 3.14+. Remove .venv and rerun: rm -rf .venv && bash scripts/setup_and_train_mac.sh"
 fi
 
-echo "[setup_and_train] Upgrading pip and installing requirements-local.txt"
 python -m pip install --upgrade pip
 pip install -r "$ROOT/requirements-local.txt"
 
 # --- Download data ---
 if [[ "$SKIP_FETCH" -eq 0 ]]; then
-  echo "[setup_and_train] Downloading data (manifest fetch, no Node/npm)"
+  echo "ingest"
   python "$ROOT/scripts/ingest_data.py" --fetch-only --no-node
 else
-  echo "[setup_and_train] Skipping fetch (--skip-fetch)"
+  echo "skip fetch"
 fi
 
 # --- Sanity check for training CSV ---
@@ -109,7 +96,6 @@ if [[ ! -f "$ROOT/notebooks/PreprocessData.csv" ]] && [[ ! -f "$ROOT/data/notebo
 fi
 
 # --- Train ---
-echo "[setup_and_train] Running training notebook via scripts/train_models.py"
 python "$ROOT/scripts/train_models.py"
 
-echo "[setup_and_train] Done. Executed notebook: notebooks/_executed/training_models.executed.ipynb"
+echo "done — notebooks/_executed/training_models.executed.ipynb"

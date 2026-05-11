@@ -1,13 +1,4 @@
-# Local workflow (from repository root)
-
-python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-local.txt
-
-# 1) Data ingestion (Node/npm + data/manifest.json → data/downloads/)
-python3 scripts/ingest_data.py
-
-# 2) Model training (headless notebook execute → notebooks/_executed/)
-python3 scripts/train_models.py
-# or interactive:
-# python3 scripts/train_models.py --interactive
+python run.py ingest
+python run.py

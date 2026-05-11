@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pull datasets from manifests (and optionally npm setup under scripts/nodejs). Repo root: python3 scripts/ingest_data.py"""
+"""Manifest fetch + optional npm. From repo root: python scripts/ingest_data.py"""
 from __future__ import annotations
 
 import argparse
@@ -16,35 +16,20 @@ def repo_root() -> Path:
 
 def node_ingestion(root: Path, skip: bool) -> int:
     if skip:
-        print("[ingest] Skipping Node.js / npm setup (--no-node or --fetch-only).", flush=True)
         return 0
     node = shutil.which("node")
     if not node:
-        print(
-            "[ingest] Node.js not found; skipping npm install. "
-            "Install Node LTS if you need GitHub REST/GraphQL collectors.",
-            file=sys.stderr,
-            flush=True,
-        )
         return 0
     node_dir = root / "scripts" / "nodejs"
     node_dir.mkdir(parents=True, exist_ok=True)
     (node_dir / "graphQlData").mkdir(exist_ok=True)
     (node_dir / "repos").mkdir(exist_ok=True)
     if not (node_dir / "package.json").is_file():
-        print(
-            "[ingest] scripts/nodejs/ has no package.json — skipping npm install. "
-            "Restore scripts/nodejs from the repository (see README Node section).",
-            file=sys.stderr,
-            flush=True,
-        )
         return 0
     env_file = node_dir / ".env"
     example = node_dir / ".env.example"
     if not env_file.exists() and example.exists():
         shutil.copy(example, env_file)
-        print(f"[ingest] Created {env_file} from .env.example — add TOKEN etc. if using collectors.", flush=True)
-    print("[ingest] npm install (scripts/nodejs)…", flush=True)
     r = subprocess.run(["npm", "install"], cwd=str(node_dir), check=False)
     if r.returncode != 0:
         print("[ingest] npm install failed.", file=sys.stderr, flush=True)
@@ -54,30 +39,21 @@ def node_ingestion(root: Path, skip: bool) -> int:
 
 def fetch_ingestion(root: Path, skip: bool) -> int:
     if skip:
-        print("[ingest] Skipping dataset fetch (--no-fetch or SKIP_DATASET_FETCH).", flush=True)
         return 0
     fetcher = root / "scripts" / "python" / "fetch_datasets.py"
     if not fetcher.is_file():
-        print(f"[ingest] Missing {fetcher}", file=sys.stderr, flush=True)
+        print(f"[ingest] missing {fetcher}", file=sys.stderr, flush=True)
         return 1
-    print("[ingest] Running manifest fetch (data/manifest.json)…", flush=True)
     r = subprocess.run([sys.executable, str(fetcher)], cwd=str(root), check=False)
-    if r.returncode != 0:
-        print(
-            "[ingest] fetch_datasets exited non-zero. "
-            "Try SKIP_DATASET_FETCH=1 or see data/README.md.",
-            file=sys.stderr,
-            flush=True,
-        )
     return r.returncode
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Data ingestion: Node tooling + dataset downloads.")
-    p.add_argument("--no-node", action="store_true", help="Skip npm install and .env bootstrap under scripts/nodejs/.")
-    p.add_argument("--no-fetch", action="store_true", help="Skip data/manifest.json fetch.")
-    p.add_argument("--node-only", action="store_true", help="Only Node/npm setup (no manifest fetch).")
-    p.add_argument("--fetch-only", action="store_true", help="Only manifest fetch (no Node/npm).")
+    p = argparse.ArgumentParser(description="ingest_data.py")
+    p.add_argument("--no-node", action="store_true")
+    p.add_argument("--no-fetch", action="store_true")
+    p.add_argument("--node-only", action="store_true")
+    p.add_argument("--fetch-only", action="store_true")
     args = p.parse_args()
 
     root = repo_root()
@@ -95,10 +71,7 @@ def main() -> int:
     if code != 0:
         return code
 
-    print(
-        "[ingest] Done. Next: python3 scripts/train_models.py   (or open notebooks in Jupyter).",
-        flush=True,
-    )
+    print("[ingest] ok — run: python run.py", flush=True)
     return 0
 
 

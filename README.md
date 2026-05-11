@@ -6,6 +6,110 @@ This repository studies how **programming language** (and related repository sig
 
 Predictions draw on owner and organization activity: commits, forks, issues, pull requests, update cadence, README metrics, and more. Different model families are trained and evaluated on the collected dataset.
 
+## Download data and train the model
+
+Follow these steps from the **repository root** (the folder that contains `scripts/` and `data/`).
+
+### macOS: one script (recommended)
+
+From the repo root, this installs **OpenMP (`libomp`)** for XGBoost (via Homebrew when available), creates **`.venv`** with Python **3.12** or **3.13**, installs dependencies, downloads data, and runs training:
+
+```bash
+bash scripts/setup_and_train_mac.sh
+```
+
+Options:
+
+- `--skip-brew` — do not run `brew install libomp` (use if XGBoost/OpenMP is already set up).
+- `--skip-fetch` — skip download; use when `PreprocessData.csv` is already in `notebooks/` or `data/notebook_inputs/`.
+- `--recreate-venv` — delete `.venv` and start clean.
+
+If Homebrew is not installed, install it from [brew.sh](https://brew.sh) or follow the manual steps below. If XGBoost still fails to load, run `brew install libomp` and try again; the training notebook will **skip the XGBoost baseline** if the import fails, but the neural net and other baselines still run.
+
+### 1. Use Python 3.12 or 3.13
+
+Training needs **TensorFlow**. There are **no TensorFlow wheels for Python 3.14+** on PyPI, so `pip install tensorflow` will fail on 3.14.
+
+Check your version:
+
+```bash
+python3 --version
+```
+
+If you are on **3.14 or newer**, create a new virtual environment with **3.12** or **3.13** (do not reuse an old `.venv` built with 3.14).
+
+**macOS (Homebrew example):**
+
+```bash
+brew install python@3.12
+cd /path/to/AI-Project-2026
+rm -rf .venv
+/opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv
+source .venv/bin/activate
+python --version   # should show 3.12.x
+```
+
+**Linux / Windows:** Install Python 3.12 or 3.13 from your distro or [python.org](https://www.python.org/downloads/), then run `python3.12 -m venv .venv` (or `py -3.12 -m venv .venv` on Windows) and activate the venv.
+
+### 2. Install Python dependencies
+
+```bash
+pip install --upgrade pip
+pip install -r requirements-local.txt
+```
+
+Optional: `pip install -r requirements-datasets.txt` if you use Kaggle / Hugging Face fetchers (see `data/README.md`).
+
+### 3. Download the data
+
+This pulls files listed in **`data/manifest.json`** (bootstrap CSVs go to **`data/downloads/`** and copies for notebooks to **`data/notebook_inputs/`** and **`notebooks/`**).
+
+**Skip Node/npm** (only needed for live GitHub collector scripts):
+
+```bash
+python3 scripts/ingest_data.py --fetch-only --no-node
+```
+
+To also run **`npm install`** under `scripts/nodejs/` (optional):
+
+```bash
+python3 scripts/ingest_data.py --fetch-only
+```
+
+Training expects **`PreprocessData.csv`** in one of these places (the notebook checks automatically):
+
+- `notebooks/PreprocessData.csv`
+- `data/notebook_inputs/PreprocessData.csv`
+
+If the file is missing, confirm ingest finished without errors and see **`data/downloads/fetch_log.json`**.
+
+### 4. Train and evaluate models
+
+Runs **`notebooks/training_models.ipynb`** headlessly with Jupyter and writes the executed notebook to **`notebooks/_executed/training_models.executed.ipynb`**:
+
+```bash
+python3 scripts/train_models.py
+```
+
+**Interactive alternative** (run cells yourself in the browser):
+
+```bash
+python3 scripts/train_models.py --interactive
+```
+
+Then open the printed path to **`notebooks/training_models.ipynb`** in Jupyter.
+
+### Troubleshooting
+
+| Problem | What to do |
+|--------|------------|
+| `Python 3.14+ cannot run this notebook` | Recreate `.venv` with Python **3.12** or **3.13** (step 1), reinstall requirements, run train again. |
+| `PreprocessData.csv not found` | Run step 3 (`ingest_data.py --fetch-only`). If you use your own GitHub raw URLs, set `DATA_GITHUB_OWNER`, `DATA_GITHUB_REPO`, and `DATA_GITHUB_REF` before ingest (see `data/sources/github_raw/README.md`). |
+| `jupyter` not found | Ensure `pip install -r requirements-local.txt` ran inside the activated venv. |
+| `XGBoost Library ... libomp.dylib` (Mac) | Run `brew install libomp`, or use `bash scripts/setup_and_train_mac.sh` which installs it when Homebrew is present. |
+
+---
+
 ## Repository setup
 
 After you create the GitHub repository with the title above, clone it locally and set these placeholders wherever they appear (README, notebooks, `scripts/bash`):
@@ -15,12 +119,12 @@ After you create the GitHub repository with the title above, clone it locally an
 
 ## Local development (two pipeline scripts)
 
-Install [Python](https://www.python.org/) and (if you use the GitHub collectors) [Node.js](https://nodejs.org/) LTS.
+Use the **[Download data and train the model](#download-data-and-train-the-model)** section above for copy-paste setup (correct Python version, ingest, train).
 
-**TensorFlow / Keras Tuner:** there are **no official TensorFlow wheels for Python 3.14+** yet, so `pip install` would report `No matching distribution found for tensorflow`. Use **Python 3.12 or 3.13** for the training notebook (for example `brew install python@3.12` on macOS, then `/opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv`). `requirements-local.txt` uses environment markers so installs still succeed on 3.14 for the non-TF packages.
+Install [Python](https://www.python.org/) 3.12 or 3.13 for training and (if you use the GitHub collectors) [Node.js](https://nodejs.org/) LTS. `requirements-local.txt` skips TensorFlow on 3.14+ so `pip` still works there for non-training installs only.
 
 ```bash
-python3 -m venv .venv
+# After creating .venv with Python 3.12 or 3.13:
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-local.txt
 ```
@@ -29,7 +133,7 @@ pip install -r requirements-local.txt
 
 Run with **`python3 scripts/ingest_data.py`** (not only `./scripts/ingest_data.py`, unless the file is executable and your shell resolves the shebang).
 
-Runs **`npm install`** under `scripts/nodejs/` (creates `graphQlData/`, `repos/`, seeds `.env` from `.env.example` when missing), then runs **`scripts/python/fetch_datasets.py`** using **`datasets/manifest.json`**: HTTP bootstrap CSVs, optional Kaggle / advisory clone / Hugging Face sources (see **`datasets/README.md`**). Flags: `--no-node`, `--no-fetch`, `--node-only`, `--fetch-only`. Environment: `SKIP_DATASET_FETCH`, `FETCH_ENABLE_*`, `DATA_GITHUB_*`, etc. Optional pip: **`requirements-datasets.txt`**.
+Runs **`npm install`** under `scripts/nodejs/` (creates `graphQlData/`, `repos/`, seeds `.env` from `.env.example` when missing), then runs **`scripts/python/fetch_datasets.py`** using **`data/manifest.json`**: HTTP bootstrap CSVs, optional Kaggle / advisory clone / Hugging Face sources (see **`data/README.md`**). Flags: `--no-node`, `--no-fetch`, `--node-only`, `--fetch-only`. Environment: `SKIP_DATASET_FETCH`, `FETCH_ENABLE_*`, `DATA_GITHUB_*`, etc. Optional pip: **`requirements-datasets.txt`**.
 
 ### 2. Model training — `scripts/train_models.py`
 
@@ -43,11 +147,11 @@ After step 1, from `scripts/nodejs/` with `.env` configured: `node getting_repos
 
 ## Dataset
 
-We combine a **Kaggle** base ([donbarbos/github-repos](https://www.kaggle.com/datasets/donbarbos/github-repos)), optional **GH Archive** aggregates (BigQuery), the **GitHub Advisory Database**, **CommitPackFT** (Hugging Face), and **GitHub REST/GraphQL** enrichment—see **`datasets/README.md`**. **Bulk files are not committed:** `python3 scripts/ingest_data.py` fills **`datasets/downloads/`** per `datasets/manifest.json`. Each source has **`datasets/sources/<name>/README.md`**. Legacy notebook CSVs still come from the `github_raw` HTTP entries. For feature lists, see the summary section below.
+We combine a **Kaggle** base ([donbarbos/github-repos](https://www.kaggle.com/datasets/donbarbos/github-repos)), optional **GH Archive** aggregates (BigQuery), the **GitHub Advisory Database**, **CommitPackFT** (Hugging Face), and **GitHub REST/GraphQL** enrichment—see **`data/README.md`**. **Bulk files are not committed:** `python3 scripts/ingest_data.py` fills **`data/downloads/`** per `data/manifest.json`. Each source has **`data/sources/<name>/README.md`**. Legacy notebook CSVs still come from the `github_raw` HTTP entries. For feature lists, see the summary section below.
 
 ## Tools used
 
-- Python 3.10+ (recommended for local notebooks; original work also used Python 2.7)
+- Python **3.12 or 3.13** for TensorFlow training (3.14+ is not supported by TensorFlow wheels yet)
 - Jupyter Notebook
 - NumPy
 - Sklearn
@@ -65,7 +169,9 @@ Below is a brief description of the code files and folders in the repo.
 
 ### Pipeline scripts (primary)
 
-- **`scripts/ingest_data.py`** — Data ingestion: Node/npm bootstrap + manifest downloads (`datasets/manifest.json` → `datasets/downloads/`, notebook copies). Implementation: `scripts/python/fetch_datasets.py`.
+- **`scripts/setup_and_train_mac.sh`** — macOS: Homebrew `libomp` (optional), venv with Python 3.12/3.13, `pip install`, `ingest_data.py --fetch-only --no-node`, `train_models.py`.
+
+- **`scripts/ingest_data.py`** — Data ingestion: Node/npm bootstrap + manifest downloads (`data/manifest.json` → `data/downloads/`, notebook copies). Implementation: `scripts/python/fetch_datasets.py`.
 
 - **`scripts/train_models.py`** — Model training: executes `notebooks/training_models.ipynb` via `jupyter nbconvert` into `notebooks/_executed/` (or `--interactive` for manual Jupyter).
 
@@ -93,7 +199,7 @@ Below is a brief description of the code files and folders in the repo.
 
 - **fetch_datasets.py** <br>
   filepath: scripts/python/fetch_datasets.py<br>
-  Called by **`scripts/ingest_data.py`**. Reads `datasets/manifest.json` (`sources[]` …) and writes under `datasets/downloads/<source_key>/` plus `fetch_log.json`; each source is documented in `datasets/sources/<source_key>/README.md`.
+  Called by **`scripts/ingest_data.py`**. Reads `data/manifest.json` (`sources[]` …) and writes under `data/downloads/<source_key>/` plus `fetch_log.json`; each source is documented in `data/sources/<source_key>/README.md`.
 
 - **json_to_csv.py**<br>
   filepath: scripts/python/json_to_csv.py<br>

@@ -18,5 +18,5 @@ GROUP BY repo.name, type
 ORDER BY repo_name, event_type;
 
 -- Export results from the BigQuery UI (Save Results → CSV/Parquet) into:
---   datasets/downloads/gharchive_bigquery/
+--   data/downloads/gharchive_bigquery/
 -- and document the export filename in your merge notebook.

@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""
-Download / clone / snapshot datasets listed in datasets/manifest.json (version 2).
-
-Invoked by ``scripts/ingest_data.py`` (do not need to run this file directly unless debugging).
-
-Each source uses ``source_key`` (folder under datasets/downloads/) and is documented in
-``datasets/sources/<source_key>/README.md``.
-"""
+"""Download into data/downloads/ per data/manifest.json. Called from scripts/ingest_data.py."""
 
 from __future__ import annotations
 
@@ -30,7 +23,7 @@ def repo_root() -> Path:
 
 
 def load_manifest(root: Path) -> dict:
-    path = root / "datasets" / "manifest.json"
+    path = root / "data" / "manifest.json"
     with path.open(encoding="utf-8") as f:
         return json.load(f)
 
@@ -38,7 +31,6 @@ def load_manifest(root: Path) -> dict:
 def manifest_sources(manifest: dict) -> list[dict]:
     if isinstance(manifest.get("sources"), list):
         return manifest["sources"]
-    # v1 compatibility
     return [
         {**a, "type": "http_github_raw"}
         for a in (manifest.get("artifacts") or [])
@@ -52,7 +44,7 @@ def env_truthy(name: str | None) -> bool:
 
 
 def env_optional_enabled(spec: dict) -> bool:
-    """Optional heavy fetchers require env_enable=1 or global FETCH_ENABLE_ALL_OPTIONAL=1."""
+    """Heavy sources need env_enable or FETCH_ENABLE_ALL_OPTIONAL."""
     if env_truthy("FETCH_ENABLE_ALL_OPTIONAL"):
         return True
     return env_truthy(spec.get("env_enable"))
@@ -409,7 +401,7 @@ def record_manual(root: Path, spec: dict, log: dict) -> None:
     if spec.get("sql_template_relative"):
         entry["sql_template_relative"] = spec["sql_template_relative"]
     log["artifacts"].append(entry)
-    print(f"[{aid}] manual source — see {spec.get('readme_relative', 'datasets/README.md')}")
+    print(f"[{aid}] manual source — see {spec.get('readme_relative', 'data/README.md')}")
 
 
 def main() -> int:
@@ -430,7 +422,7 @@ def main() -> int:
         return 0
 
     owner, repo, ref = resolve_coordinates(manifest)
-    downloads = root / "datasets" / "downloads"
+    downloads = root / "data" / "downloads"
     downloads.mkdir(parents=True, exist_ok=True)
 
     log: dict = {

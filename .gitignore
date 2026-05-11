@@ -40,17 +40,18 @@ jspm_packages
 scripts/nodejs/.env
 .idea/
 dist
-data/
-# Downloaded / generated datasets (tracked docs live under datasets/ and datasets/sources/)
-datasets/downloads/
 
-# Working copies produced for notebooks by data ingestion (fetch_datasets.py)
+# Fetched / generated data (manifest + source READMEs under data/ stay tracked)
+data/downloads/
+data/notebook_inputs/*.csv
+data/notebook_inputs/*.json
+
+# Working copies for notebooks (fetch can also write under data/notebook_inputs/)
 notebooks/data.csv
 notebooks/PreprocessData.csv
-dataset/*.csv
-dataset/*.json
 scripts/nodejs/node_modules
 notebooks/.ipynb_checkpoints/
 notebooks/keras_tuner_scratch/
 notebooks/_executed/
 notebooks/tpot.ipynb
+.venv/

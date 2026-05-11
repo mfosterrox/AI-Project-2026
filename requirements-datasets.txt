@@ -1,4 +1,4 @@
-# Optional dependencies for extended dataset fetchers (see datasets/manifest.json).
+# Optional dependencies for extended dataset fetchers (see data/manifest.json).
 # Install: pip install -r requirements-datasets.txt
 kaggle>=1.6.0
 huggingface_hub>=0.20.0

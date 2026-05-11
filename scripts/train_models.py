@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""
-2/2 — Model training: executes the training notebook headlessly (or prints how to run interactively).
-
-Default: jupyter nbconvert --execute notebooks/training_models.ipynb
-Run from repository root:  python3 scripts/train_models.py
-"""
+"""Run notebooks/training_models.ipynb via nbconvert (from repo root: python3 scripts/train_models.py)."""
 from __future__ import annotations
 
 import argparse
@@ -19,7 +14,7 @@ def repo_root() -> Path:
 
 
 def check_tensorflow_runtime() -> int:
-    """TensorFlow has no official wheels for Python 3.14+; requirements-local skips installing it."""
+    """Fail fast if Python or TensorFlow won't run the notebook."""
     if sys.version_info >= (3, 14):
         print(
             "[train] Python 3.14+ cannot run this notebook: TensorFlow has no PyPI wheels yet.\n"

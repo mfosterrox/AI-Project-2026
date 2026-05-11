@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""
-1/2 — Data ingestion: Node.js API tooling (optional) + dataset fetch from manifests.
-
-Replaces the former split between setup_local.sh and fetch_datasets.sh.
-Run from repository root:  python3 scripts/ingest_data.py
-"""
+"""Pull datasets from manifests (and optionally npm setup under scripts/nodejs). Repo root: python3 scripts/ingest_data.py"""
 from __future__ import annotations
 
 import argparse
@@ -65,12 +60,12 @@ def fetch_ingestion(root: Path, skip: bool) -> int:
     if not fetcher.is_file():
         print(f"[ingest] Missing {fetcher}", file=sys.stderr, flush=True)
         return 1
-    print("[ingest] Running manifest fetch (datasets/manifest.json)…", flush=True)
+    print("[ingest] Running manifest fetch (data/manifest.json)…", flush=True)
     r = subprocess.run([sys.executable, str(fetcher)], cwd=str(root), check=False)
     if r.returncode != 0:
         print(
             "[ingest] fetch_datasets exited non-zero. "
-            "Try SKIP_DATASET_FETCH=1 or see datasets/README.md.",
+            "Try SKIP_DATASET_FETCH=1 or see data/README.md.",
             file=sys.stderr,
             flush=True,
         )
@@ -80,7 +75,7 @@ def fetch_ingestion(root: Path, skip: bool) -> int:
 def main() -> int:
     p = argparse.ArgumentParser(description="Data ingestion: Node tooling + dataset downloads.")
     p.add_argument("--no-node", action="store_true", help="Skip npm install and .env bootstrap under scripts/nodejs/.")
-    p.add_argument("--no-fetch", action="store_true", help="Skip datasets/manifest.json fetch.")
+    p.add_argument("--no-fetch", action="store_true", help="Skip data/manifest.json fetch.")
     p.add_argument("--node-only", action="store_true", help="Only Node/npm setup (no manifest fetch).")
     p.add_argument("--fetch-only", action="store_true", help="Only manifest fetch (no Node/npm).")
     args = p.parse_args()

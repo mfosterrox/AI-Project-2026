@@ -1,4 +1,4 @@
-"""One-off generator: writes notebooks/training_models.ipynb (modern TF/Keras pipeline)."""
+"""Regenerate notebooks/training_models.ipynb — run if you edit this script."""
 import json
 from pathlib import Path
 
@@ -16,20 +16,11 @@ def code(s):
     cells.append({"cell_type": "code", "execution_count": None, "metadata": {}, "outputs": [], "source": src})
 
 md("""
-# GitHub stars regression: **neural network (main)** vs. **baselines**
+# Predicting repo stars (DNN vs baselines)
 
-This notebook **clearly separates**:
+Part A fits RF / gradient boosting / XGBoost / CatBoost. Part B is a dense Keras net with Keras Tuner. Part C is a small LSTM on a made-up weekly sequence from `commits` — only there so the notebook can run an LSTM without GH Archive data yet.
 
-- **Part A — Baselines:** tree ensembles (Random Forest, Gradient Boosting, **XGBoost**, **CatBoost**). These are strong non-linear baselines on tabular data.
-- **Part B — Main model:** a **tuned feed-forward network** in TensorFlow/Keras with **BatchNormalization**, **Dropout**, and **L2** regularization, trained with **EarlyStopping** and **ReduceLROnPlateau**. Hyperparameters are searched with **Keras Tuner** (small budget for a course run; tighten `max_trials` / epochs if you have GPU time).
-- **Part C — Optional LSTM demo:** a **small LSTM** on a **synthetic weekly activity proxy** built from `commits` (replace with real **GH Archive** weekly features when available).
-
-**Metrics:** \\(R^2\\), MAE, MSE on the held-out test set — we compare all models side by side.
-""")
-
-code("""
-# Optional: uncomment if your environment is missing packages
-# !pip install -q tensorflow keras-tuner xgboost catboost scikit-learn pandas matplotlib
+Holdout metrics: \\(R^2\\), MAE, MSE.
 """)
 
 code("""
@@ -38,12 +29,12 @@ import sys
 import warnings
 from pathlib import Path
 
+# Use Python 3.12 or 3.13 + requirements-local.txt so TensorFlow installs.
+
 if sys.version_info >= (3, 14):
     raise RuntimeError(
-        "TensorFlow is not published for Python 3.14+ on PyPI. Recreate this environment with Python 3.12 or 3.13, "
-        "then pip install -r requirements-local.txt. Example (macOS/Homebrew):\n"
-        "  /opt/homebrew/opt/python@3.12/bin/python3.12 -m venv .venv && source .venv/bin/activate\n"
-        "  pip install -r requirements-local.txt"
+        "TensorFlow has no PyPI wheels for Python 3.14+. Use Python 3.12 or 3.13, "
+        "recreate .venv, then pip install -r requirements-local.txt (see README)."
     )
 
 import numpy as np
@@ -60,8 +51,16 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
-from xgboost import XGBRegressor
 from catboost import CatBoostRegressor
+
+try:
+    from xgboost import XGBRegressor
+
+    _HAS_XGB = True
+except Exception as _xgb_err:
+    XGBRegressor = None  # type: ignore
+    _HAS_XGB = False
+    print("XGBoost import skipped (macOS: often need `brew install libomp`):", _xgb_err)
 
 warnings.filterwarnings("ignore", category=UserWarning)
 tf.random.set_seed(42)
@@ -76,17 +75,16 @@ def metrics_dict(y_true, y_pred):
 """)
 
 code("""
-# Resolve preprocessed CSV (ingest_data.py / fetch copies here, or use ../dataset/)
 _here = Path.cwd()
 _candidates = [
     _here / "PreprocessData.csv",
-    _here.parent / "dataset" / "PreprocessData.csv",
+    _here.parent / "data" / "notebook_inputs" / "PreprocessData.csv",
 ]
 path = next((p.resolve() for p in _candidates if p.exists()), None)
 if path is None:
     raise FileNotFoundError("PreprocessData.csv not found. Run: python3 scripts/ingest_data.py --fetch-only")
 
-data_df = pd.read_csv(path).iloc[:, 1:]  # match legacy CSV: first column is row index
+data_df = pd.read_csv(path).iloc[:, 1:]  # drop index column from the legacy export
 
 if "stars" not in data_df.columns:
     raise KeyError("Expected a 'stars' target column.")
@@ -114,15 +112,14 @@ print("Train:", X_train.shape, "Test:", X_test.shape, "Features:", n_features)
 """)
 
 md("""
-## Part A — Baseline models (not the primary deliverable)
+## Part A — Baselines
 
-These models establish a **strong tabular baseline**. Same scaled features and split as the neural network.
+Same train/test split and scaling as the neural net below.
 """)
 
 code("""
 baseline_rows = []
 
-# Random Forest
 rf = RandomForestRegressor(
     n_estimators=200, max_depth=None, n_jobs=-1, random_state=42, verbose=0
 )
@@ -130,7 +127,6 @@ rf.fit(X_train, y_train)
 pred_rf = rf.predict(X_test)
 baseline_rows.append(("Random Forest", metrics_dict(y_test, pred_rf)))
 
-# Gradient Boosting (sklearn)
 gbr = GradientBoostingRegressor(
     n_estimators=200, learning_rate=0.05, max_depth=4, random_state=42, verbose=0
 )
@@ -138,23 +134,24 @@ gbr.fit(X_train, y_train)
 pred_gbr = gbr.predict(X_test)
 baseline_rows.append(("Gradient Boosting (sklearn)", metrics_dict(y_test, pred_gbr)))
 
-# XGBoost
-xgb = XGBRegressor(
-    n_estimators=300,
-    max_depth=6,
-    learning_rate=0.05,
-    subsample=0.9,
-    colsample_bytree=0.9,
-    reg_lambda=1.0,
-    random_state=42,
-    n_jobs=-1,
-    verbosity=0,
-)
-xgb.fit(X_train, y_train)
-pred_xgb = xgb.predict(X_test)
-baseline_rows.append(("XGBoost", metrics_dict(y_test, pred_xgb)))
+if _HAS_XGB and XGBRegressor is not None:
+    xgb = XGBRegressor(
+        n_estimators=300,
+        max_depth=6,
+        learning_rate=0.05,
+        subsample=0.9,
+        colsample_bytree=0.9,
+        reg_lambda=1.0,
+        random_state=42,
+        n_jobs=-1,
+        verbosity=0,
+    )
+    xgb.fit(X_train, y_train)
+    pred_xgb = xgb.predict(X_test)
+    baseline_rows.append(("XGBoost", metrics_dict(y_test, pred_xgb)))
+else:
+    print("Skipping XGBoost baseline (OpenMP / lib missing on some Macs; see README).")
 
-# CatBoost
 cat = CatBoostRegressor(
     iterations=600,
     depth=8,
@@ -184,15 +181,9 @@ print(baseline_df.sort_values("r2", ascending=False).to_string())
 """)
 
 md("""
-## Part B — **Main model:** feed-forward neural network (tuned)
+## Part B — Feed-forward net
 
-Architecture choices:
-
-- **Dense → BatchNorm → Dropout** blocks with **L2** kernel regularization.
-- **EarlyStopping** on `val_loss` and **ReduceLROnPlateau** when validation stalls.
-- **Keras Tuner** `RandomSearch` over depth, width, dropout, L2, and learning rate.
-
-> For a quick CPU run, `max_trials` and `epochs` are modest — increase if you have a GPU.
+Dense layers + batch norm + dropout + L2; tuner searches depth/width/dropout/L2/lr. Env vars `KT_MAX_TRIALS`, `KT_EPOCHS`, `KT_BATCH` control runtime.
 """)
 
 code("""
@@ -255,13 +246,10 @@ print("Best hyperparameters:", best_hp.values)
 best_model = tuner.get_best_models(1)[0]
 pred_nn = best_model.predict(X_test, verbose=0).ravel()
 nn_metrics = metrics_dict(y_test, pred_nn)
-print("Test — main FNN:", nn_metrics)
+print("FNN test:", nn_metrics)
 """)
 
 code("""
-# Optional: short retrain on train+val with best hps for slightly cleaner test eval (uses same split holdout)
-# Skip if you are time-constrained — the tuner model above already uses EarlyStopping + best weights.
-
 rows = baseline_df.reset_index().rename(columns={"index": "model"})
 rows = pd.concat(
     [
@@ -274,7 +262,7 @@ rows = pd.concat(
 )
 
 summary = rows.set_index("model").sort_values("r2", ascending=False)
-print("\\n=== Test-set comparison (higher R² is better) ===")
+print("\\nTest set (higher R² is better)")
 print(summary.to_string())
 
 fig, ax = plt.subplots(figsize=(9, 4))
@@ -283,43 +271,34 @@ ax.barh(xpos, summary["r2"].values, color="steelblue")
 ax.set_yticks(xpos)
 ax.set_yticklabels(summary.index.tolist())
 ax.set_xlabel("R² (test)")
-ax.set_title("Baselines vs main neural network")
-ax.axvline(nn_metrics["r2"], color="crimson", linestyle="--", label="FNN")
-ax.legend()
+ax.set_title("Baselines vs FNN")
 plt.tight_layout()
 plt.show()
 
 best_baseline_r2 = summary.drop(index=["Neural Net (FNN, tuned)"], errors="ignore")["r2"].max()
-print(f"\\nBest baseline R²: {best_baseline_r2:.4f} | Main FNN R²: {nn_metrics['r2']:.4f}")
-if nn_metrics["r2"] >= best_baseline_r2 - 1e-4:
-    print("FNN matches or beats the best baseline on R² (within numerical tolerance).")
-else:
-    print("FNN slightly below best baseline — try more tuner trials / epochs or log-transform targets.")
+print(f"\\nBest baseline R²: {best_baseline_r2:.4f} | FNN R²: {nn_metrics['r2']:.4f}")
 """)
 
 md("""
-## Part C — **Optional:** small LSTM on a **weekly activity proxy**
+## Part C — LSTM (placeholder)
 
-Real temporal features should come from **GH Archive** (weekly commits / stars). Here we build a **toy 5-week sequence** per repo from `commits` (with small deterministic drift + noise) so you can run an LSTM end-to-end without extra files.
-
-**Replace `seq_train` / `seq_test`** with your `(n_samples, n_weeks, n_features)` tensor when GH Archive data is merged.
+Fake 5-step sequences from `commits` so there is something temporal to feed the LSTM. Swap in real weekly features later if you add GH Archive.
 """)
 
 code("""
 if com_tr is None:
-    print("No 'commits' column — skipping LSTM demo.")
+    print("No commits column, skipping LSTM.")
 else:
     rng = np.random.default_rng(42)
 
     def weekly_proxy(commit_series: pd.Series | np.ndarray) -> np.ndarray:
         c = np.maximum(np.asarray(commit_series, dtype=np.float32), 0.0)
         T = 5
-        # pseudo-weekly "activity" around commits (illustrative only)
         seq = np.stack(
             [c * (1.0 + 0.04 * t) + rng.normal(0, 0.02 * (c + 1.0), size=c.shape) for t in range(T)],
             axis=1,
         )
-        return seq[..., np.newaxis]  # (n, T, 1)
+        return seq[..., np.newaxis]
 
     seq_train = weekly_proxy(com_tr)
     seq_test = weekly_proxy(com_te)
@@ -348,8 +327,11 @@ else:
     )
     pred_lstm = lstm.predict(seq_test, verbose=0).ravel()
     lstm_m = metrics_dict(y_test, pred_lstm)
-    print("LSTM (proxy sequences) test metrics:", lstm_m)
+    print("LSTM test:", lstm_m)
 """)
+
+for _i, _cell in enumerate(cells):
+    _cell.setdefault("id", f"cell-{_i}")
 
 nb = {
     "nbformat": 4,

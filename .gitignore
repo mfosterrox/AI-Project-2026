@@ -43,15 +43,13 @@ dist
 
 # Fetched / generated data (manifest + source READMEs under data/ stay tracked)
 data/downloads/
-data/notebook_inputs/*.csv
-data/notebook_inputs/*.json
 
-# Working copies for notebooks (fetch can also write under data/notebook_inputs/)
-notebooks/data.csv
-notebooks/PreprocessData.csv
+# Large CSVs: GitHub warns above ~50MB / blocks above 100MB per file. Use Git LFS if needed:
+#   git lfs track "*.csv"
+# For submission you can commit smaller samples or the paths below after shrinking.
+
 scripts/nodejs/node_modules
 notebooks/.ipynb_checkpoints/
 notebooks/keras_tuner_scratch/
-notebooks/_executed/
 notebooks/tpot.ipynb
 .venv/
